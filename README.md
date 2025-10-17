@@ -253,6 +253,7 @@ pealfs/
 ├─ commands.c               # Implementação dos comandos (mkdir, cd, ls, etc)
 ├─ shell.c                  # Loop principal do shell e parser de comandos
 ├─ mkfs.c                   # Formatador do filesystem
+├─ gerarLogs.ps1               # Script PowerShell para compilação automatizada
 └─ README.md
 ```
 
