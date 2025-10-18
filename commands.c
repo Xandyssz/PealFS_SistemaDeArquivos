@@ -370,3 +370,73 @@ void do_cat(const char* filename) {
     }
     printf("\n"); // Adiciona uma nova linha no final da saída
 }
+
+
+void do_rm(const char* name) {
+    // 1. Encontrar a entrada no diretório atual
+    Inode parent_inode;
+    read_inode(current_directory_inode, &parent_inode);
+    char parent_block_buffer[BLOCK_SIZE];
+    read_block(parent_inode.direct_blocks[0], parent_block_buffer);
+    DirectoryEntry *entries = (DirectoryEntry *)parent_block_buffer;
+    int num_entries = parent_inode.size / sizeof(DirectoryEntry);
+
+    int entry_index = -1;
+    int target_inode_num = -1;
+    for (int i = 0; i < num_entries; i++) {
+        if (strcmp(entries[i].name, name) == 0) {
+            entry_index = i;
+            target_inode_num = entries[i].inode_number;
+            break;
+        }
+    }
+
+    if (entry_index == -1) {
+        printf("Erro: Arquivo ou diretorio '%s' nao encontrado.\n", name);
+        return;
+    }
+
+    // Não permitir remover '.' ou '..'
+    if (strcmp(name, ".") == 0 || strcmp(name, "..") == 0) {
+        printf("Erro: Nao e possivel remover os diretorios '.' ou '..'.\n");
+        return;
+    }
+
+    // 2. Ler o inode do alvo
+    Inode target_inode;
+    read_inode(target_inode_num, &target_inode);
+
+    // 3. Se for um diretório, verificar se está vazio
+    if (target_inode.type == 'd') {
+        if (target_inode.size > 2 * sizeof(DirectoryEntry)) {
+            printf("Erro: O diretorio '%s' nao esta vazio.\n", name);
+            return;
+        }
+    }
+
+    // 4. Liberar os blocos de dados
+    for (int i = 0; i < target_inode.block_count; i++) {
+        if (target_inode.direct_blocks[i] != -1) {
+            free_block(target_inode.direct_blocks[i]);
+        }
+    }
+
+    // 4.1. Liberar o inode
+    target_inode.type = 'u';
+    write_inode(target_inode_num, &target_inode);
+
+    // 5. Remover a entrada do diretório pai
+    // Copiamos a última entrada para a posição da entrada removida
+    if (entry_index != num_entries - 1) { // Se não for o último elemento
+        entries[entry_index] = entries[num_entries - 1];
+    }
+    // O último slot pode ser zerado, mas não é estritamente necessário
+    // já que vamos diminuir o tamanho do diretório.
+
+    // 6. Atualizar e salvar o inode e bloco do pai
+    parent_inode.size -= sizeof(DirectoryEntry);
+    write_inode(current_directory_inode, &parent_inode);
+    write_block(parent_inode.direct_blocks[0], parent_block_buffer);
+
+    printf("'%s' removido com sucesso.\n", name);
+}
