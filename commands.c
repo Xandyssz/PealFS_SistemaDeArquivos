@@ -123,3 +123,41 @@ void do_mkdir(const char* dir_name) {
     printf("Diretorio '%s' criado com sucesso.\n", dir_name);
 }
 
+
+void do_cd(const char* path) {
+    // Caso especial: ir para o diretório raiz
+    if (strcmp(path, "/") == 0) {
+        current_directory_inode = 0;
+        return;
+    }
+
+    // Procurar pelo nome do diretório no diretório atual
+    Inode current_inode;
+    read_inode(current_directory_inode, &current_inode);
+
+    char block_buffer[BLOCK_SIZE];
+    read_block(current_inode.direct_blocks[0], block_buffer);
+    DirectoryEntry *entries = (DirectoryEntry *)block_buffer;
+    int num_entries = current_inode.size / sizeof(DirectoryEntry);
+
+    for (int i = 0; i < num_entries; i++) {
+        if (strcmp(entries[i].name, path) == 0) {
+            // Encontramos uma entrada com o nome correspondente.
+            // Agora, precisamos verificar se é um diretório.
+            Inode target_inode;
+            read_inode(entries[i].inode_number, &target_inode);
+            if (target_inode.type == 'd') {
+                // É um diretório, então a mudança é válida.
+                current_directory_inode = entries[i].inode_number;
+                return;
+            } else {
+                printf("Erro: '%s' nao e um diretorio.\n", path);
+                return;
+            }
+        }
+    }
+
+    // Se o loop terminar, não encontramos o diretório.
+    printf("Erro: Diretorio '%s' nao encontrado.\n", path);
+}
+
