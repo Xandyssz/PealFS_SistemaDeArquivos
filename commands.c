@@ -322,3 +322,51 @@ void do_touch(const char* filename) {
     printf("Arquivo '%s' criado com sucesso.\n", filename);
 }
 
+
+void do_cat(const char* filename) {
+    // 1. Encontrar o arquivo no diretório atual
+    Inode parent_inode;
+    read_inode(current_directory_inode, &parent_inode);
+    char block_buffer[BLOCK_SIZE];
+    read_block(parent_inode.direct_blocks[0], block_buffer);
+    DirectoryEntry *entries = (DirectoryEntry *)block_buffer;
+    int num_entries = parent_inode.size / sizeof(DirectoryEntry);
+
+    int file_inode_num = -1;
+    for (int i = 0; i < num_entries; i++) {
+        if (strcmp(entries[i].name, filename) == 0) {
+            file_inode_num = entries[i].inode_number;
+            break;
+        }
+    }
+
+    if (file_inode_num == -1) {
+        printf("Erro: Arquivo '%s' nao encontrado.\n", filename);
+        return;
+    }
+
+    // 2. Verificar se é um arquivo
+    Inode file_inode;
+    read_inode(file_inode_num, &file_inode);
+    if (file_inode.type != 'f') {
+        printf("Erro: '%s' nao e um arquivo de texto.\n", filename);
+        return;
+    }
+
+    // 3. Ler e imprimir o conteúdo bloco por bloco
+    char content_buffer[BLOCK_SIZE];
+    int bytes_left_to_read = file_inode.size;
+
+    for (int i = 0; i < file_inode.block_count; i++) {
+        read_block(file_inode.direct_blocks[i], content_buffer);
+
+        int bytes_to_print = (bytes_left_to_read > BLOCK_SIZE) ? BLOCK_SIZE : bytes_left_to_read;
+
+        // fwrite é melhor para imprimir dados brutos do que printf
+        fwrite(content_buffer, 1, bytes_to_print, stdout);
+
+        bytes_left_to_read -= bytes_to_print;
+        if (bytes_left_to_read <= 0) break;
+    }
+    printf("\n"); // Adiciona uma nova linha no final da saída
+}
