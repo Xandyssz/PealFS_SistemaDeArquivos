@@ -161,3 +161,69 @@ void do_cd(const char* path) {
     printf("Erro: Diretorio '%s' nao encontrado.\n", path);
 }
 
+
+void do_pwd() {
+    // Se estamos na raiz, a tarefa é simples.
+    if (current_directory_inode == 0) {
+        printf("/\n");
+        return;
+    }
+
+    char path[1024] = ""; // Armazenará o caminho final
+    char reversed_path[1024] = ""; // Armazenará o caminho construído de trás para frente
+    int current_inode_num = current_directory_inode;
+
+    while (current_inode_num != 0) {
+        Inode current_inode_obj;
+        read_inode(current_inode_num, &current_inode_obj);
+
+        // Precisamos encontrar o pai para descobrir o nome do diretório atual
+        Inode parent_inode_obj;
+        int parent_inode_num = -1;
+
+        // Ler o bloco de dados do diretório ATUAL para encontrar a entrada '..'
+        char block_buffer[BLOCK_SIZE];
+        read_block(current_inode_obj.direct_blocks[0], block_buffer);
+        DirectoryEntry* entries = (DirectoryEntry*)block_buffer;
+        int num_entries = current_inode_obj.size / sizeof(DirectoryEntry);
+
+        // Encontrar o inode do pai
+        for (int i = 0; i < num_entries; i++) {
+            if (strcmp(entries[i].name, "..") == 0) {
+                parent_inode_num = entries[i].inode_number;
+                break;
+            }
+        }
+
+        if (parent_inode_num == -1) {
+            printf("Erro: Estrutura de diretorio corrompida. Nao foi possivel encontrar '..'\n");
+            return;
+        }
+
+        read_inode(parent_inode_num, &parent_inode_obj);
+
+        // Agora, ler o bloco de dados do PAI para encontrar como ele nos chama
+        char parent_block_buffer[BLOCK_SIZE];
+        read_block(parent_inode_obj.direct_blocks[0], parent_block_buffer);
+        DirectoryEntry* parent_entries = (DirectoryEntry*)parent_block_buffer;
+        int num_parent_entries = parent_inode_obj.size / sizeof(DirectoryEntry);
+
+        char current_dir_name[MAX_FILENAME] = "";
+        for (int i = 0; i < num_parent_entries; i++) {
+            if (parent_entries[i].inode_number == current_inode_num) {
+                strcpy(current_dir_name, parent_entries[i].name);
+                break;
+            }
+        }
+
+        // Prepend (adicionar no início) o nome encontrado ao caminho reverso
+        char temp_path[1024];
+        sprintf(temp_path, "/%s%s", current_dir_name, reversed_path);
+        strcpy(reversed_path, temp_path);
+
+        // Subir um nível para a próxima iteração
+        current_inode_num = parent_inode_num;
+    }
+
+    printf("%s\n", reversed_path);
+}
