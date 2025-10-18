@@ -44,3 +44,82 @@ void do_ls() {
         }
     }
 }
+
+
+void do_mkdir(const char* dir_name) {
+    // 0. Validações básicas
+    if (strlen(dir_name) > MAX_FILENAME - 1) {
+        printf("Erro: Nome do diretorio e muito longo.\n");
+        return;
+    }
+
+    // 1. Verificar se o nome já existe no diretório atual
+    Inode parent_inode;
+    read_inode(current_directory_inode, &parent_inode);
+    char block_buffer[BLOCK_SIZE];
+    read_block(parent_inode.direct_blocks[0], block_buffer);
+    DirectoryEntry *entries = (DirectoryEntry *)block_buffer;
+    int num_entries = parent_inode.size / sizeof(DirectoryEntry);
+
+    for (int i = 0; i < num_entries; i++) {
+        if (strcmp(entries[i].name, dir_name) == 0) {
+            printf("Erro: O nome '%s' ja existe neste diretorio.\n", dir_name);
+            return;
+        }
+    }
+
+    // Checar se há espaço para nova entrada no bloco do diretório pai
+    if (num_entries >= (BLOCK_SIZE / sizeof(DirectoryEntry))) {
+        printf("Erro: O diretorio atual esta cheio.\n");
+        return;
+    }
+
+    // 2. Encontrar um inode e um bloco de dados livres
+    int new_inode_num = find_free_inode();
+    if (new_inode_num == -1) {
+        printf("Erro: Nao ha inodes livres.\n");
+        return;
+    }
+    int new_block_num = find_free_block();
+    if (new_block_num == -1) {
+        printf("Erro: Nao ha blocos de dados livres.\n");
+        return;
+    }
+
+    // 3. Alocar o bloco de dados
+    alloc_block(new_block_num);
+
+    // 4. Configurar o inode para o novo diretório
+    Inode new_inode;
+    new_inode.type = 'd';
+    new_inode.size = 2 * sizeof(DirectoryEntry); // Para '.' e '..'
+    new_inode.block_count = 1;
+    new_inode.direct_blocks[0] = new_block_num;
+    for (int i = 1; i < NUM_DIRECT_POINTERS; i++) {
+        new_inode.direct_blocks[i] = -1; // Marcar outros ponteiros como não utilizados
+    }
+
+    // 5. Preparar o bloco de dados do novo diretório com as entradas '.' e '..'
+    char new_block_buffer[BLOCK_SIZE] = {0};
+    DirectoryEntry *new_entries = (DirectoryEntry *)new_block_buffer;
+    strcpy(new_entries[0].name, ".");
+    new_entries[0].inode_number = new_inode_num;
+    strcpy(new_entries[1].name, "..");
+    new_entries[1].inode_number = current_directory_inode;
+
+    // 6. Adicionar a entrada do novo diretório no diretório pai
+    strcpy(entries[num_entries].name, dir_name);
+    entries[num_entries].inode_number = new_inode_num;
+
+    // 7. Atualizar o inode do diretório pai
+    parent_inode.size += sizeof(DirectoryEntry);
+
+    // 8. Escrever tudo de volta para o "disco"
+    write_inode(new_inode_num, &new_inode);
+    write_block(new_block_num, new_block_buffer);
+    write_inode(current_directory_inode, &parent_inode);
+    write_block(parent_inode.direct_blocks[0], block_buffer);
+
+    printf("Diretorio '%s' criado com sucesso.\n", dir_name);
+}
+
