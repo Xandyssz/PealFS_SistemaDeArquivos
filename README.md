@@ -113,7 +113,7 @@ Diretórios sempre possuem:
 | **ls** | `ls` | Lista arquivos e diretórios com tipo, i-node e tamanho | `$ ls` | ✅ Feito |
 | **rm** | `rm <nome>` | Remove arquivo ou diretório vazio | `$ rm arquivo.txt` | ✅ Feito |
 | **stat** | `stat` | Mostra espaço livre, blocos livres e tamanho do bloco | `$ stat` | ✅ Feito |
-| **exit** | `exit` | Encerra o shell | `$ exit` | ✅ Implementado |
+| **exit** | `exit` | Encerra o shell | `$ exit` | ✅ Feito |
 
 ***
 
