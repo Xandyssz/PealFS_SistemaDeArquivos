@@ -440,3 +440,37 @@ void do_rm(const char* name) {
 
     printf("'%s' removido com sucesso.\n", name);
 }
+
+
+void do_stat() {
+    int free_blocks_count = 0;
+
+    // 1. Ler o bitmap de freespace.dat
+    FILE *fp = fopen("fs/freespace.dat", "rb");
+    if (!fp) {
+        perror("Erro ao abrir freespace.dat");
+        return;
+    }
+
+    char bitmap[NUM_BLOCKS / 8];
+    fread(bitmap, sizeof(bitmap), 1, fp);
+    fclose(fp);
+
+    // 2. Iterar sobre o bitmap para contar os bits '0' (livres)
+    for (int byte_index = 0; byte_index < (NUM_BLOCKS / 8); byte_index++) {
+        for (int bit_index = 0; bit_index < 8; bit_index++) {
+            // Verifica se o bit na posição 'bit_index' está zerado (livre)
+            if (!((bitmap[byte_index] >> (7 - bit_index)) & 1)) {
+                free_blocks_count++;
+            }
+        }
+    }
+
+    // 3. Calcular o espaço livre
+    int free_space_bytes = free_blocks_count * BLOCK_SIZE;
+
+    // 4. Imprimir as informações no formato solicitado
+    printf("Espaco livre: %d Bytes\n", free_space_bytes);
+    printf("Blocos livres: %d Blocos\n", free_blocks_count);
+    printf("Tamanho do bloco: %d Bytes\n", BLOCK_SIZE);
+}
