@@ -227,3 +227,98 @@ void do_pwd() {
 
     printf("%s\n", reversed_path);
 }
+
+
+void do_touch(const char* filename) {
+    // 1. Validações e verificação de nome duplicado (similar ao mkdir)
+    if (strlen(filename) > MAX_FILENAME - 1) {
+        printf("Erro: Nome do arquivo e muito longo.\n");
+        return;
+    }
+
+    Inode parent_inode;
+    read_inode(current_directory_inode, &parent_inode);
+    char parent_block_buffer[BLOCK_SIZE];
+    read_block(parent_inode.direct_blocks[0], parent_block_buffer);
+    DirectoryEntry *entries = (DirectoryEntry *)parent_block_buffer;
+    int num_entries = parent_inode.size / sizeof(DirectoryEntry);
+
+    for (int i = 0; i < num_entries; i++) {
+        if (strcmp(entries[i].name, filename) == 0) {
+            printf("Erro: O nome '%s' ja existe neste diretorio.\n", filename);
+            return;
+        }
+    }
+
+    // 2. Encontrar um inode livre
+    int new_inode_num = find_free_inode();
+    if (new_inode_num == -1) {
+        printf("Erro: Nao ha inodes livres.\n");
+        return;
+    }
+
+    // 3. Ler o conteúdo do usuário
+    printf("Digite o conteudo do arquivo. Pressione Ctrl+Z (Windows) ou Ctrl+D (Linux) para salvar.\n");
+    char full_content[PARTITION_SIZE] = {0}; // Buffer grande para o conteúdo
+    char line[512];
+    size_t total_size = 0;
+
+    while (fgets(line, sizeof(line), stdin) != NULL) {
+        strcat(full_content, line);
+        total_size += strlen(line);
+    }
+    clearerr(stdin); // Limpa o estado de EOF para o próximo comando
+
+    // 4. Calcular e alocar blocos de dados necessários
+    int blocks_needed = (total_size + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    if (blocks_needed == 0) blocks_needed = 1; // Alocar ao menos 1 bloco para arquivo vazio
+    if (blocks_needed > NUM_DIRECT_POINTERS) {
+        printf("Erro: O conteudo do arquivo e muito grande para esta versao do sistema.\n");
+        return;
+    }
+
+    int allocated_blocks[NUM_DIRECT_POINTERS];
+    for (int i = 0; i < blocks_needed; i++) {
+        int new_block = find_free_block();
+        if (new_block == -1) {
+            printf("Erro: Espaco em disco insuficiente.\n");
+            // Liberar blocos já alocados (importante!)
+            for(int j = 0; j < i; j++) free_block(allocated_blocks[j]);
+            return;
+        }
+        alloc_block(new_block);
+        allocated_blocks[i] = new_block;
+    }
+
+    // 5. Configurar o inode do novo arquivo
+    Inode new_inode;
+    new_inode.type = 'f';
+    new_inode.size = total_size;
+    new_inode.block_count = blocks_needed;
+    for (int i = 0; i < blocks_needed; i++) {
+        new_inode.direct_blocks[i] = allocated_blocks[i];
+    }
+    for (int i = blocks_needed; i < NUM_DIRECT_POINTERS; i++) {
+        new_inode.direct_blocks[i] = -1; // Marcar como não usado
+    }
+
+    // 6. Escrever o conteúdo nos blocos de dados
+    for (int i = 0; i < blocks_needed; i++) {
+        char block_to_write[BLOCK_SIZE] = {0};
+        memcpy(block_to_write, full_content + (i * BLOCK_SIZE), BLOCK_SIZE);
+        write_block(allocated_blocks[i], block_to_write);
+    }
+
+    // 7. Atualizar o diretório pai
+    strcpy(entries[num_entries].name, filename);
+    entries[num_entries].inode_number = new_inode_num;
+    parent_inode.size += sizeof(DirectoryEntry);
+
+    // 8. Salvar tudo no disco
+    write_inode(new_inode_num, &new_inode);
+    write_inode(current_directory_inode, &parent_inode);
+    write_block(parent_inode.direct_blocks[0], parent_block_buffer);
+
+    printf("Arquivo '%s' criado com sucesso.\n", filename);
+}
+
