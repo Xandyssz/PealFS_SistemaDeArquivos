@@ -1,4 +1,4 @@
-// Arquivo: shell.c (Completo até o comando 'cd')
+// Arquivo: shell.c
 
 #include "disk_ops.h"
 #include "commands.h"
