@@ -310,15 +310,6 @@ Distribuído sob a licença MIT. Veja `LICENSE` para mais informações.
 
 ***
 
-## 👨‍💻 Autor
-
-Desenvolvido como projeto acadêmico para a disciplina de Sistemas Operacionais 2.
-
-**Prazo de entrega:** 20/10/2025 - 07h10  
-**Peso:** 1,0
-
-***
-
 ## 📚 Referências
 
 - Tanenbaum, A. S. - *Modern Operating Systems*
