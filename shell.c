@@ -21,7 +21,7 @@ int main()
     while (1)
     {
         // 1. Mostrar o prompt
-        printf("peal:/ > ");
+        printf("peal:/ > " );
 
         // 2. Ler a entrada do usuário
         if (fgets(input, sizeof(input), stdin) == NULL)

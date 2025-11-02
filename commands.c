@@ -147,7 +147,7 @@ void do_cd(const char* path) {
             Inode target_inode;
             read_inode(entries[i].inode_number, &target_inode);
             if (target_inode.type == 'd') {
-                // É um diretório, então a mudança é válida.
+                // É um diretório
                 current_directory_inode = entries[i].inode_number;
                 return;
             } else {
@@ -163,7 +163,7 @@ void do_cd(const char* path) {
 
 
 void do_pwd() {
-    // Se estamos na raiz, a tarefa é simples.
+    // Se estamos na raiz
     if (current_directory_inode == 0) {
         printf("/\n");
         return;
@@ -202,7 +202,7 @@ void do_pwd() {
 
         read_inode(parent_inode_num, &parent_inode_obj);
 
-        // Agora, ler o bloco de dados do PAI para encontrar como ele nos chama
+        // ler o bloco de dados do PAI para encontrar como ele nos chama
         char parent_block_buffer[BLOCK_SIZE];
         read_block(parent_inode_obj.direct_blocks[0], parent_block_buffer);
         DirectoryEntry* parent_entries = (DirectoryEntry*)parent_block_buffer;

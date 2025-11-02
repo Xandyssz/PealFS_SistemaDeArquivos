@@ -8,24 +8,21 @@
 #include <string.h>
 #include <stdint.h> // Para usar tipos como uint8_t
 
-// --- CONSTANTES BASEADAS NOS REQUISITOS ---
+// --- CONSTANTES ---
 
 #define BLOCK_SIZE 128          // Tamanho do bloco em bytes
 #define PARTITION_SIZE 10240    // Tamanho total da partição em bytes
 #define NUM_BLOCKS (PARTITION_SIZE / BLOCK_SIZE) // Total de blocos (80)
-#define MAX_INODES 256          // Máximo de inodes (limitado pelo uint8_t)
+#define MAX_INODES 256          // Máximo de inodes 
 #define MAX_FILENAME 14         // Tamanho máximo do nome de arquivo
 
 // O número de ponteiros diretos para blocos de dados em um inode.
-// A imagem sugere 4, vamos usar 4 para começar.
 #define NUM_DIRECT_POINTERS 4
 
 // --- ESTRUTURAS DE DADOS ---
 
 /*
  * Superbloco: Armazena os metadados do sistema de arquivos.
- * Vamos simplificar e usar as constantes definidas acima, mas em um sistema
- * real, leríamos isso do arquivo superblock.dat.
  */
 typedef struct {
     char filesystem[8];      // Nome do sistema de arquivos
@@ -43,7 +40,6 @@ typedef struct {
     uint32_t size;                      // Tamanho do arquivo em bytes
     uint16_t block_count;               // Quantidade de blocos utilizados
     uint16_t direct_blocks[NUM_DIRECT_POINTERS]; // Ponteiros diretos para os blocos de dados
-    // Podemos adicionar ponteiros indiretos aqui no futuro, se necessário.
 } Inode;
 
 /*
@@ -56,4 +52,4 @@ typedef struct {
 } DirectoryEntry;
 
 
-#endif // FS_H
+#endif 
