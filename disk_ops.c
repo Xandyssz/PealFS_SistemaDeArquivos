@@ -79,6 +79,7 @@ int find_free_block() {
             for (int bit_index = 0; bit_index < 8; bit_index++) {
                 // Verifica se o bit na posição 'bit_index' está zerado (livre)
                 if (!((bitmap[byte_index] >> (7 - bit_index)) & 1)) {
+                    
                     int block_num = (byte_index * 8) + bit_index;
                     return block_num;
                 }
@@ -98,12 +99,15 @@ void alloc_block(int block_num) {
         int byte_index = block_num / 8;
         int bit_offset = 7 - (block_num % 8); // MSB-first
         bitmap[byte_index] |= (1 << bit_offset);
+        // X | 0 = X
 
         fseek(fp, 0, SEEK_SET);
         fwrite(bitmap, sizeof(bitmap), 1, fp);
         fclose(fp);
     }
 }
+
+
 
 // Marca um bloco como livre (0) no bitmap (usaremos no comando 'rm')
 void free_block(int block_num) {

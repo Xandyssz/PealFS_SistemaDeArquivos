@@ -11,7 +11,8 @@ Write-Host "Compilando mkfs..." -ForegroundColor Cyan
 & $CC -o mkfs mkfs.c $CFLAGS
 
 Write-Host "Compilando shell..." -ForegroundColor Cyan
-& $CC -o shell shell.c disk_ops.c commands.c $CFLAGS
+# --- MUDANÇA AQUI: Adicionado hash_search.c à lista de compilação ---
+& $CC -o shell shell.c disk_ops.c commands.c hash_search.c $CFLAGS
 
 # Verifica se a compilação foi bem-sucedida
 if ((Test-Path ".\mkfs.exe") -and (Test-Path ".\shell.exe")) {
