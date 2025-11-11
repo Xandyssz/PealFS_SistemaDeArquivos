@@ -115,33 +115,37 @@ void do_mkdir(const char* dir_name) {
 
 // --- COMANDO CD ---
 void do_cd(const char* path) {
+    // Caso especial: ir para o diretório raiz
     if (strcmp(path, "/") == 0) {
         current_directory_inode = 0;
         return;
     }
 
-    Inode current_inode;
-    read_inode(current_directory_inode, &current_inode);
-
-    char block_buffer[BLOCK_SIZE];
-    read_block(current_inode.direct_blocks[0], block_buffer);
-    DirectoryEntry *entries = (DirectoryEntry *)block_buffer;
-    int num_entries = current_inode.size / sizeof(DirectoryEntry);
-
-    for (int i = 0; i < num_entries; i++) {
-        if (strcmp(entries[i].name, path) == 0) {
-            Inode target_inode;
-            read_inode(entries[i].inode_number, &target_inode);
-            if (target_inode.type == 'd') {
-                current_directory_inode = entries[i].inode_number;
-                return;
-            } else {
-                printf("Erro: '%s' nao e um diretorio.\n", path);
-                return;
-            }
-        }
+    // 1. Usar a Hash para encontrar o inode do destino
+    HashTable *dir_cache = load_directory_to_hash(current_directory_inode);
+    if (dir_cache == NULL) {
+        printf("Erro ao carregar cache do diretorio.\n");
+        return;
     }
-    printf("Erro: Diretorio '%s' nao encontrado.\n", path);
+
+    int target_inode_num = search_in_hash(dir_cache, path);
+    free_hash_table(dir_cache); // Limpar memória
+
+    // 2. Verificar se encontrou
+    if (target_inode_num == -1) {
+        printf("Erro: Diretorio '%s' nao encontrado.\n", path);
+        return;
+    }
+
+    // 3. Verificar se é um diretório
+    Inode target_inode;
+    read_inode(target_inode_num, &target_inode);
+
+    if (target_inode.type == 'd') {
+        current_directory_inode = target_inode_num;
+    } else {
+        printf("Erro: '%s' nao e um diretorio.\n", path);
+    }
 }
 
 // --- COMANDO PWD ---
